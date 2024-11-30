@@ -32,10 +32,4 @@ This project demonstrates how to measure temperature using an NTC thermistor and
 
 ---
 
-## Code Explanation
-1. **Power Control**:  
-   The voltage divider can be powered via a digital pin to save energy in battery-powered applications.  
-   ```cpp
-   #define VD_POWER_PIN 7
-   digitalWrite(VD_POWER_PIN, HIGH); // Power on
-   digitalWrite(VD_POWER_PIN, LOW);  // Power off
+
