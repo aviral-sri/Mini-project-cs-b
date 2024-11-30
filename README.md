@@ -1,4 +1,4 @@
-# Ultrasonic Height Detector
++# Ultrasonic Height Detector
 
 This project measures the height of an object using an **ultrasonic sensor** and a **servo motor**, calculating height with trigonometry.
 
@@ -22,43 +22,18 @@ This project measures the height of an object using an **ultrasonic sensor** and
 ## How It Works
 1. The servo sweeps from 0° to 90° while measuring distances.
 2. A sudden increase in distance detects the object’s top edge.
-3. Height is calculated using:
-   \[
-   h = d_{\text{base}} - d_{\text{top}} \cdot \sin(\theta_{\text{top}})
-   \]
+3. ## Height Calculation Formula
 
-## Code
-```cpp
-#include <Servo.h>
+The height of the object is calculated using the formula:
 
-const int trigPin = 9, echoPin = 10;
-Servo servo;
-float baseDistance, currentDistance, topDistance = 0;
-int topAngle = -1; const float threshold = 10.0;
+\[
+h = d_{\text{base}} - d_{\text{top}} \cdot \sin(\theta_{\text{top}})
+\]
 
-long measureDistance() {
-  digitalWrite(trigPin, LOW); delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH); delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-  return (pulseIn(echoPin, HIGH) * 0.034) / 2;
-}
+### Explanation:
+- **\( h \)**: The height of the object relative to the base.
+- **\( d_{\text{base}} \)**: The distance measured at the base angle (0°).
+- **\( d_{\text{top}} \)**: The distance measured at the top edge of the object.
+- **\( \theta_{\text{top}} \)**: The angle at which the top edge of the object is detected (measured by the servo motor).
 
-void setup() {
-  pinMode(trigPin, OUTPUT); pinMode(echoPin, INPUT);
-  servo.attach(11); Serial.begin(9600); 
-  servo.write(0); delay(500);
-  baseDistance = measureDistance();
-}
-
-void loop() {
-  for (int angle = 0; angle <= 90; angle += 5) {
-    servo.write(angle); delay(500);
-    currentDistance = measureDistance();
-    if (currentDistance - baseDistance > threshold) {
-      topAngle = angle; topDistance = currentDistance;
-      float height = baseDistance - topDistance * sin(radians(topAngle));
-      Serial.print("Height: "); Serial.println(height);
-      delay(5000); break;
-    }
-  }
-}
+This formula uses trigonometric principles to determine the height of the object based on the distance measurements and the angle of detection.
