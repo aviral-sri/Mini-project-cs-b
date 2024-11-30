@@ -1,61 +1,73 @@
-// Pin definitions and constants
-#define NTC_PIN A0                 // Pin connected to the voltage divider
-#define VD_POWER_PIN 7             // Pin to power the voltage divider (optional)
-#define SAMPLING_RATE 10           // Number of samples to average
-#define RREF 10000.0               // Reference resistor value in ohms
-#define NOMINAL_RESISTANCE 10000.0 // Resistance of the thermistor at 25°C
-#define NOMINAL_TEMPERATURE 25.0   // Nominal temperature in Celsius
-#define BETA 3950.0                // Beta coefficient of the thermistor
+#include <Servo.h>
+
+// Pin Definitions
+const int trigPin = 9;
+const int echoPin = 10;
+Servo servo;
+
+// Variables
+float baseDistance;
+float currentDistance;
+int topAngle = -1;
+float topDistance = 0;
+const float threshold = 10.0; // Threshold for detecting the edge (in cm)
+
+// Function to Measure Distance
+long measureDistance() {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  long duration = pulseIn(echoPin, HIGH); // Measure the time for the echo
+  return (duration * 0.034) / 2;          // Convert to cm
+}
 
 void setup() {
-  pinMode(VD_POWER_PIN, OUTPUT);
-  digitalWrite(VD_POWER_PIN, LOW); // Ensure the divider is off initially
+  // Initialize Pins
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  
+  // Initialize Servo
+  servo.attach(11);
+  
+  // Serial Monitor for Debugging
   Serial.begin(9600);
-  Serial.println("Thermistor Temperature Measurement");
+  
+  // Measure the Base Distance at 0°
+  servo.write(0); // Move servo to 0°
+  delay(500);
+  baseDistance = measureDistance();
+  Serial.print("Base Distance: ");
+  Serial.println(baseDistance);
 }
 
 void loop() {
-  uint8_t i;
-  float samples = 0;
-  float average;
+  for (int angle = 0; angle <= 90; angle += 5) { // Sweep from 0° to 90°
+    servo.write(angle); // Move servo to the angle
+    delay(500); // Allow the servo to stabilize
 
-  // Power the voltage divider
-  digitalWrite(VD_POWER_PIN, HIGH);
+    currentDistance = measureDistance();
+    Serial.print("Angle: ");
+    Serial.print(angle);
+    Serial.print("° Distance: ");
+    Serial.println(currentDistance);
 
-  // Take voltage readings
-  for (i = 0; i < SAMPLING_RATE; i++) {
-    samples += analogRead(NTC_PIN);
-    delay(10); // Small delay between samples
+    // Detect Top Edge (Sudden Increase in Distance)
+    if (currentDistance - baseDistance > threshold) {
+      topAngle = angle;
+      topDistance = currentDistance;
+      Serial.println("Top edge detected!");
+
+      // Calculate Height Using Trigonometry
+      float height = baseDistance - topDistance * sin(radians(topAngle));
+      Serial.print("Object Height: ");
+      Serial.print(height);
+      Serial.println(" cm");
+
+      delay(5000); // Pause for 5 seconds before restarting
+      break; // Stop scanning after detection
+    }
   }
-
-  // Turn off the voltage divider to save power (optional)
-  digitalWrite(VD_POWER_PIN, LOW);
-
-  // Calculate the average ADC reading
-  average = samples / SAMPLING_RATE;
-  Serial.print("ADC Reading: ");
-  Serial.println(average);
-
-  // Calculate thermistor resistance
-  average = 1023 / average - 1; // (Vin/Vout - 1)
-  average = RREF / average;    // Resistance of the thermistor
-  Serial.print("Thermistor Resistance: ");
-  Serial.print(average);
-  Serial.println(" ohms");
-
-  // Calculate temperature using the Steinhart-Hart equation
-  float temperature;
-  temperature = average / NOMINAL_RESISTANCE;           // (R/Ro)
-  temperature = log(temperature);                      // ln(R/Ro)
-  temperature /= BETA;                                 // 1/B * ln(R/Ro)
-  temperature += 1.0 / (NOMINAL_TEMPERATURE + 273.15); // + (1/To)
-  temperature = 1.0 / temperature;                     // Invert
-  temperature -= 273.15;                               // Convert Kelvin to Celsius
-
-  // Print temperature
-  Serial.print("Temperature: ");
-  Serial.print(temperature);
-  Serial.println(" °C");
-
-  delay(1000); // Wait before the next reading
 }
